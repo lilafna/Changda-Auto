@@ -713,10 +713,9 @@ footer .foot-links a{margin:0 8px}
             <label>Prix (laisser vide = "sur devis")</label>
             <input type="text" id="prodPrice" placeholder="ex : 45 000 000 GNF">
           </div>
-          <div class="full-width">
-            <label>Photo du véhicule</label>
-            <input type="file" id="prodImageFile" accept="image/*">
-            <img id="prodImagePreview" src="" alt="" style="display:none;margin-top:10px;max-width:160px;border-radius:4px">
+          <div>
+            <label>Chemin de l'image (dossier Images)</label>
+            <input type="text" id="prodImage" placeholder="Images/mon-camion.jpg">
           </div>
           <div class="full-width">
             <label>Caractéristiques (une par ligne)</label>
@@ -760,9 +759,6 @@ import {
 import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import {
-  getStorage, ref, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCvMkfzEbjKaVERydzDa7rwJqv9sKyGRg0",
@@ -775,7 +771,6 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
-const storage = getStorage(firebaseApp);
 
 /* Compte administrateur unique : créé dans Firebase Console > Authentication.
    L'email sert uniquement à la connexion technique, il n'est jamais affiché sur le site. */
@@ -1296,8 +1291,6 @@ function resetProductForm(){
   document.getElementById('productId').value = '';
   document.getElementById('productFormTitle').textContent = 'Ajouter un produit';
   document.getElementById('productFormCancel').style.display = 'none';
-  document.getElementById('prodImagePreview').style.display = 'none';
-  document.getElementById('prodImagePreview').src = '';
 }
 document.getElementById('productFormCancel').addEventListener('click', resetProductForm);
 
@@ -1305,8 +1298,6 @@ document.getElementById('productForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const submitBtn = document.querySelector('#productForm button[type="submit"]');
   const id = document.getElementById('productId').value || ('p' + Date.now());
-  const existing = getProducts().find(p=>p.id===id);
-  const file = document.getElementById('prodImageFile').files[0];
 
   const product = {
     id,
@@ -1314,7 +1305,7 @@ document.getElementById('productForm').addEventListener('submit', async (e)=>{
     category: document.getElementById('prodCategory').value,
     status: document.getElementById('prodStatus').value,
     price: document.getElementById('prodPrice').value.trim(),
-    image: existing ? existing.image : '',
+    image: document.getElementById('prodImage').value.trim(),
     specs: document.getElementById('prodSpecs').value.split('\n').map(s=>s.trim()).filter(Boolean)
   };
   if (!product.name) return;
@@ -1322,12 +1313,6 @@ document.getElementById('productForm').addEventListener('submit', async (e)=>{
   submitBtn.disabled = true;
   const originalLabel = submitBtn.textContent;
   try{
-    if (file){
-      submitBtn.textContent = 'Envoi de l\'image…';
-      const imgRef = ref(storage, `products/${id}/${Date.now()}-${file.name}`);
-      await uploadBytes(imgRef, file);
-      product.image = await getDownloadURL(imgRef);
-    }
     submitBtn.textContent = 'Enregistrement…';
     await saveProductRemote(product);
     resetProductForm();
@@ -1375,10 +1360,7 @@ function editProduct(id){
   document.getElementById('prodCategory').value = p.category;
   document.getElementById('prodStatus').value = p.status;
   document.getElementById('prodPrice').value = p.price;
-  document.getElementById('prodImageFile').value = '';
-  const preview = document.getElementById('prodImagePreview');
-  if (p.image){ preview.src = p.image; preview.style.display = 'block'; }
-  else { preview.style.display = 'none'; }
+  document.getElementById('prodImage').value = p.image;
   document.getElementById('prodSpecs').value = (p.specs||[]).join('\n');
   document.getElementById('productFormTitle').textContent = 'Modifier le produit';
   document.getElementById('productFormCancel').style.display = 'inline-block';
