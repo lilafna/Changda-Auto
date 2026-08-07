@@ -681,7 +681,7 @@ footer .foot-links a{margin:0 8px}
   <div class="admin-modal-body">
 
     <div id="adminLoginView">
-      <p class="admin-notice">Accès réservé à l'administrateur du site. Les données du catalogue (produits ajoutés ici) sont enregistrées dans le stockage local de ce navigateur.</p>
+      <p class="admin-notice">Accès réservé à l'administrateur du site. Les produits ajoutés ici sont visibles immédiatement par tous les visiteurs du site.</p>
       <label for="adminPassInput" style="display:block;font-weight:600;margin-bottom:6px">Mot de passe</label>
       <input type="password" id="adminPassInput" placeholder="Mot de passe administrateur" autocomplete="current-password">
       <button class="btn" id="adminLoginBtn" style="margin-top:14px;width:100%">Se connecter</button>
@@ -713,9 +713,10 @@ footer .foot-links a{margin:0 8px}
             <label>Prix (laisser vide = "sur devis")</label>
             <input type="text" id="prodPrice" placeholder="ex : 45 000 000 GNF">
           </div>
-          <div>
-            <label>Chemin de l'image (dossier Images)</label>
-            <input type="text" id="prodImage" placeholder=atcatalogue1.jpg">
+          <div class="full-width">
+            <label>Photo du véhicule</label>
+            <input type="file" id="prodImageFile" accept="image/*">
+            <img id="prodImagePreview" src="" alt="" style="display:none;margin-top:10px;max-width:160px;border-radius:4px">
           </div>
           <div class="full-width">
             <label>Caractéristiques (une par ligne)</label>
@@ -731,24 +732,14 @@ footer .foot-links a{margin:0 8px}
       <div class="admin-section">
         <h4>Produits publiés</h4>
         <div id="adminProductList"></div>
+        <button type="button" class="btn btn-secondary" id="seedProductsBtn" style="margin-top:14px">Importer les produits de démonstration</button>
       </div>
 
       <div class="admin-section">
-        <h4>Changer le mot de passe</h4>
-        <div class="admin-form">
-          <div>
-            <label>Mot de passe actuel</label>
-            <input type="password" id="currentPassInput">
-          </div>
-          <div>
-            <label>Nouveau mot de passe</label>
-            <input type="password" id="newPassInput">
-          </div>
-          <div class="full-width">
-            <button type="button" class="btn btn-secondary" id="changePassBtn" style="width:100%">Mettre à jour le mot de passe</button>
-          </div>
-          <p class="admin-error" id="changePassMsg" style="grid-column:1/-1"></p>
-        </div>
+        <h4>Mot de passe</h4>
+        <p class="admin-notice">Pour changer ton mot de passe, un e-mail te sera envoyé avec un lien de réinitialisation.</p>
+        <button type="button" class="btn btn-secondary" id="changePassBtn" style="width:100%">Recevoir le lien par e-mail</button>
+        <p class="admin-error" id="changePassMsg" style="display:none;margin-top:10px"></p>
       </div>
 
     </div>
@@ -760,7 +751,36 @@ footer .foot-links a{margin:0 8px}
   <div class="foot-links"><a href="#" id="adminLink" data-i18n="footer_admin">Espace Admin</a></div>
 </footer>
 
-<script>
+<script type="module">
+/* ===================== FIREBASE (base de données + images + connexion admin) ===================== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCvMkfzEbjKaVERydzDa7rwJqv9sKyGRg0",
+  authDomain: "changda-vehicules.firebaseapp.com",
+  projectId: "changda-vehicules",
+  storageBucket: "changda-vehicules.firebasestorage.app",
+  messagingSenderId: "486553920927",
+  appId: "1:486553920927:web:04730a07184e6ae8e889aa"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
+const storage = getStorage(firebaseApp);
+
+/* Compte administrateur unique : créé dans Firebase Console > Authentication.
+   L'email sert uniquement à la connexion technique, il n'est jamais affiché sur le site. */
+const ADMIN_EMAIL = 'lilafna224@gmail.com';
+
 /* ===================== TRADUCTIONS ===================== */
 const translations = {
   fr: {
@@ -966,18 +986,37 @@ const DEFAULT_PRODUCTS = [
    image:'https://images.unsplash.com/photo-1592840331665-6f0b1a6e6b1a?auto=format&fit=crop&w=600&q=80'}
 ];
 
+/* Cache local rempli en temps réel par Firestore : tous les visiteurs du site
+   reçoivent automatiquement les mêmes produits, dès qu'ils sont enregistrés. */
+let cachedProducts = [];
+let productsLoaded = false;
+
 function getProducts(){
-  try{
-    const raw = localStorage.getItem(PRODUCTS_KEY);
-    if (!raw){
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(DEFAULT_PRODUCTS));
-      return DEFAULT_PRODUCTS.slice();
-    }
-    return JSON.parse(raw);
-  }catch(e){ return DEFAULT_PRODUCTS.slice(); }
+  return cachedProducts;
 }
-function saveProducts(list){
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
+
+/* Enregistre UN produit dans Firestore (utilisé par le formulaire admin). */
+async function saveProductRemote(product){
+  await setDoc(doc(db, 'products', product.id), product);
+}
+/* Supprime UN produit dans Firestore. */
+async function deleteProductRemote(id){
+  await deleteDoc(doc(db, 'products', id));
+}
+/* Écoute en direct la collection "products" : dès qu'un admin ajoute/modifie/supprime
+   un produit, TOUS les visiteurs déjà sur le site voient le changement automatiquement. */
+onSnapshot(collection(db, 'products'), (snapshot)=>{
+  cachedProducts = snapshot.docs.map(d => d.data());
+  productsLoaded = true;
+  renderCatalog();
+  renderCart();
+  if (typeof renderAdminProductList === 'function' && document.getElementById('adminDashboardView')?.style.display !== 'none'){
+    renderAdminProductList();
+  }
+});
+/* Importe le catalogue de démonstration dans Firestore (bouton admin, une seule fois). */
+async function seedDefaultProducts(){
+  await Promise.all(DEFAULT_PRODUCTS.map(p => setDoc(doc(db, 'products', p.id), p)));
 }
 
 let currentFilter = 'all';
@@ -1181,28 +1220,12 @@ document.getElementById('cartCheckoutBtn').addEventListener('click', ()=>{
   if (contact) contact.scrollIntoView({behavior:'smooth'});
 });
 
-/* ===================== ADMIN (espace protégé, données locales au navigateur) ===================== */
-const ADMIN_HASH_KEY = 'changda_admin_hash';
-const DEFAULT_ADMIN_PASSWORD = 'lilafna224@?!';
-
-async function sha256(text){
-  const enc = new TextEncoder().encode(text);
-  const buf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-async function ensureAdminHash(){
-  if (!localStorage.getItem(ADMIN_HASH_KEY)){
-    localStorage.setItem(ADMIN_HASH_KEY, await sha256(DEFAULT_ADMIN_PASSWORD));
-  }
-}
-ensureAdminHash();
-
-let adminLoggedIn = sessionStorage.getItem('changda_admin_session') === '1';
+/* ===================== ADMIN (connexion Firebase — un seul compte administrateur) ===================== */
 
 function openAdmin(){
   document.getElementById('adminModal').classList.add('open');
   document.getElementById('overlay').classList.add('open');
-  if (adminLoggedIn) showAdminDashboard(); else showAdminLogin();
+  if (auth.currentUser) showAdminDashboard(); else showAdminLogin();
 }
 function closeAdmin(){
   document.getElementById('adminModal').classList.remove('open');
@@ -1224,22 +1247,33 @@ function showAdminDashboard(){
   resetProductForm();
 }
 
+/* Garde le tableau de bord synchronisé avec l'état de connexion réel de Firebase,
+   même après un rechargement de page (session gérée par Firebase, pas par le navigateur). */
+onAuthStateChanged(auth, (user)=>{
+  if (document.getElementById('adminModal').classList.contains('open')){
+    if (user) showAdminDashboard(); else showAdminLogin();
+  }
+});
+
 document.getElementById('adminLink').addEventListener('click', (e)=>{ e.preventDefault(); openAdmin(); });
 document.getElementById('adminCloseBtn').addEventListener('click', closeAdmin);
-document.getElementById('adminLogoutBtn').addEventListener('click', ()=>{
-  adminLoggedIn = false;
-  sessionStorage.removeItem('changda_admin_session');
+document.getElementById('adminLogoutBtn').addEventListener('click', async ()=>{
+  await signOut(auth);
   showAdminLogin();
 });
 document.getElementById('adminLoginBtn').addEventListener('click', async ()=>{
   const pass = document.getElementById('adminPassInput').value;
-  const hash = await sha256(pass);
-  if (hash === localStorage.getItem(ADMIN_HASH_KEY)){
-    adminLoggedIn = true;
-    sessionStorage.setItem('changda_admin_session', '1');
+  const loginBtn = document.getElementById('adminLoginBtn');
+  loginBtn.disabled = true;
+  try{
+    await signInWithEmailAndPassword(auth, ADMIN_EMAIL, pass);
+    document.getElementById('adminLoginError').style.display = 'none';
     showAdminDashboard();
-  } else {
+  } catch(err){
+    document.getElementById('adminLoginError').textContent = 'Mot de passe incorrect.';
     document.getElementById('adminLoginError').style.display = 'block';
+  } finally {
+    loginBtn.disabled = false;
   }
 });
 document.getElementById('adminPassInput').addEventListener('keydown', (e)=>{
@@ -1262,30 +1296,47 @@ function resetProductForm(){
   document.getElementById('productId').value = '';
   document.getElementById('productFormTitle').textContent = 'Ajouter un produit';
   document.getElementById('productFormCancel').style.display = 'none';
+  document.getElementById('prodImagePreview').style.display = 'none';
+  document.getElementById('prodImagePreview').src = '';
 }
 document.getElementById('productFormCancel').addEventListener('click', resetProductForm);
 
-document.getElementById('productForm').addEventListener('submit', (e)=>{
+document.getElementById('productForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
+  const submitBtn = document.querySelector('#productForm button[type="submit"]');
   const id = document.getElementById('productId').value || ('p' + Date.now());
+  const existing = getProducts().find(p=>p.id===id);
+  const file = document.getElementById('prodImageFile').files[0];
+
   const product = {
     id,
     name: document.getElementById('prodName').value.trim(),
     category: document.getElementById('prodCategory').value,
     status: document.getElementById('prodStatus').value,
     price: document.getElementById('prodPrice').value.trim(),
-    image: document.getElementById('prodImage').value.trim(),
+    image: existing ? existing.image : '',
     specs: document.getElementById('prodSpecs').value.split('\n').map(s=>s.trim()).filter(Boolean)
   };
   if (!product.name) return;
-  let products = getProducts();
-  const idx = products.findIndex(p=>p.id===id);
-  if (idx>=0) products[idx] = product; else products.push(product);
-  saveProducts(products);
-  resetProductForm();
-  renderAdminProductList();
-  renderCatalog();
-  renderCart();
+
+  submitBtn.disabled = true;
+  const originalLabel = submitBtn.textContent;
+  try{
+    if (file){
+      submitBtn.textContent = 'Envoi de l\'image…';
+      const imgRef = ref(storage, `products/${id}/${Date.now()}-${file.name}`);
+      await uploadBytes(imgRef, file);
+      product.image = await getDownloadURL(imgRef);
+    }
+    submitBtn.textContent = 'Enregistrement…';
+    await saveProductRemote(product);
+    resetProductForm();
+  } catch(err){
+    alert('Erreur lors de l\'enregistrement : ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalLabel;
+  }
 });
 
 function renderAdminProductList(){
@@ -1324,42 +1375,38 @@ function editProduct(id){
   document.getElementById('prodCategory').value = p.category;
   document.getElementById('prodStatus').value = p.status;
   document.getElementById('prodPrice').value = p.price;
-  document.getElementById('prodImage').value = p.image;
+  document.getElementById('prodImageFile').value = '';
+  const preview = document.getElementById('prodImagePreview');
+  if (p.image){ preview.src = p.image; preview.style.display = 'block'; }
+  else { preview.style.display = 'none'; }
   document.getElementById('prodSpecs').value = (p.specs||[]).join('\n');
   document.getElementById('productFormTitle').textContent = 'Modifier le produit';
   document.getElementById('productFormCancel').style.display = 'inline-block';
   document.getElementById('productForm').scrollIntoView({behavior:'smooth'});
 }
-function deleteProduct(id){
+async function deleteProduct(id){
   if (!confirm('Supprimer ce produit ?')) return;
-  saveProducts(getProducts().filter(p=>p.id!==id));
-  renderAdminProductList();
-  renderCatalog();
-  renderCart();
+  try{ await deleteProductRemote(id); }
+  catch(err){ alert('Erreur lors de la suppression : ' + err.message); }
 }
 
 document.getElementById('changePassBtn').addEventListener('click', async ()=>{
-  const current = document.getElementById('currentPassInput').value;
-  const next = document.getElementById('newPassInput').value;
   const msg = document.getElementById('changePassMsg');
-  msg.style.color = 'var(--red-600)';
-  const currentHash = await sha256(current);
-  if (currentHash !== localStorage.getItem(ADMIN_HASH_KEY)){
-    msg.textContent = 'Mot de passe actuel incorrect.';
-    msg.style.display = 'block';
-    return;
+  try{
+    await sendPasswordResetEmail(auth, ADMIN_EMAIL);
+    msg.style.color = 'var(--green-600)';
+    msg.textContent = 'Un e-mail de réinitialisation a été envoyé à ' + ADMIN_EMAIL + '. Ouvre-le pour choisir ton nouveau mot de passe.';
+  } catch(err){
+    msg.style.color = 'var(--red-600)';
+    msg.textContent = 'Erreur : ' + err.message;
   }
-  if (!next || next.length<4){
-    msg.textContent = 'Le nouveau mot de passe doit contenir au moins 4 caractères.';
-    msg.style.display = 'block';
-    return;
-  }
-  localStorage.setItem(ADMIN_HASH_KEY, await sha256(next));
-  msg.style.color = 'var(--green-600)';
-  msg.textContent = 'Mot de passe mis à jour.';
   msg.style.display = 'block';
-  document.getElementById('currentPassInput').value = '';
-  document.getElementById('newPassInput').value = '';
+});
+
+document.getElementById('seedProductsBtn')?.addEventListener('click', async ()=>{
+  if (!confirm('Importer les 6 produits de démonstration dans le catalogue ?')) return;
+  await seedDefaultProducts();
+  alert('Produits de démonstration importés.');
 });
 
 /* ===================== ENVOI DES FORMULAIRES (AJAX + toast) ===================== */
@@ -1407,24 +1454,5 @@ setupAjaxForm(document.getElementById('quoteForm'));
 /* Rendu initial : on applique la langue courante (ce qui déclenche aussi
    renderCatalog() et renderCart()) maintenant que tout est défini plus haut. */
 applyTranslations(langSelect ? langSelect.value : detectDefaultLang());
-</script>
-  <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCvMkfzEbjKaVERydzDa7rwJqv9sKyGRg0",
-    authDomain: "changda-vehicules.firebaseapp.com",
-    projectId: "changda-vehicules",
-    storageBucket: "changda-vehicules.firebasestorage.app",
-    messagingSenderId: "486553920927",
-    appId: "1:486553920927:web:04730a07184e6ae8e889aa"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</body>
+</script></body>
 </html>
