@@ -1408,5 +1408,23 @@ setupAjaxForm(document.getElementById('quoteForm'));
    renderCatalog() et renderCart()) maintenant que tout est défini plus haut. */
 applyTranslations(langSelect ? langSelect.value : detectDefaultLang());
 </script>
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCvMkfzEbjKaVERydzDa7rwJqv9sKyGRg0",
+    authDomain: "changda-vehicules.firebaseapp.com",
+    projectId: "changda-vehicules",
+    storageBucket: "changda-vehicules.firebasestorage.app",
+    messagingSenderId: "486553920927",
+    appId: "1:486553920927:web:04730a07184e6ae8e889aa"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
 </body>
 </html>
