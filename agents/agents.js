@@ -4,6 +4,7 @@ const agents = {
         fonction: "Agent commercial",
         photo: "ismo.jpeg",
         statut: "ACTIF",
-        dateEmission: "13/08/2026"
+        id: "CDV-AG-004"
+        date: "13/08/2026"
     }
 };
