@@ -1,4 +1,4 @@
-const ismo = {
+const agents = {
     "CDV-AG-004": {
         nom: "ISMAEL BARRY",
         fonction: "Agent commercial",
