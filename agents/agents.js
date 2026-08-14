@@ -50,7 +50,7 @@ const agents = {
     "CDV-AG-006": {
         nom: "AMARA CAMARA",
         fonction: "AGENT COMMERCIAL",
-        photo: "amara.pdf",
+        photo: "amara.png",
         statut: "ACTIF",
         id: "CDV-AG-006",
         date: "14/08/2026"
@@ -77,6 +77,14 @@ const agents = {
         photo: "toro.jpeg",
         statut: "ACTIF",
         id: "CDV-AG-009",
+        date: "14/08/2026"
+    },
+    "CDV-AG-0010": {
+        nom: "FOFANA MAMADY",
+        fonction: "AGENT COMMERCIAL",
+        photo: "mamady.jpeg",
+        statut: "ACTIF",
+        id: "CDV-AG-008",
         date: "14/08/2026"
     }
 };
