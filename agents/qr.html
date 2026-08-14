@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générer QR Code Agent - CHANGDA VEHICLE</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f2f4f7;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      width: 100%;
+      max-width: 430px;
+      border-radius: 20px;
+      padding: 30px 25px;
+      text-align: center;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.12);
+    }
+
+    h1 {
+      color: #c40000;
+      font-size: 22px;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #555;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      font-size: 15px;
+      margin-bottom: 15px;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #c40000;
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      background: #c40000;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background: #a30000;
+    }
+
+    #qrcode {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+      min-height: 20px;
+    }
+
+    #downloadBtn {
+      display: none;
+      background: #16803c;
+    }
+
+    #downloadBtn:hover {
+      background: #116430;
+    }
+
+    .link-preview {
+      font-size: 12px;
+      color: #777;
+      word-break: break-all;
+      margin-top: 10px;
+      min-height: 16px;
+    }
+
+    .error {
+      color: #c40000;
+      font-size: 13px;
+      margin-top: 8px;
+      min-height: 16px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h1>CHANGDA VEHICLE</h1>
+    <p class="subtitle">Générateur de QR Code Agent</p>
+
+    <label for="agentId">Identifiant de l'agent (ex: CDV-AG-004)</label>
+    <input type="text" id="agentId" placeholder="CDV-AG-005">
+
+    <button onclick="genererQR()">Générer le QR Code</button>
+    <button id="downloadBtn" onclick="telechargerQR()">Télécharger l'image</button>
+
+    <div id="qrcode"></div>
+    <p class="link-preview" id="linkPreview"></p>
+    <p class="error" id="error"></p>
+  </div>
+
+  <script>
+    const BASE_URL = "https://lilafna.github.io/Changda-Auto/";
+    let qrInstance = null;
+
+    function genererQR() {
+      const id = document.getElementById("agentId").value.trim();
+      const qrDiv = document.getElementById("qrcode");
+      const linkPreview = document.getElementById("linkPreview");
+      const errorEl = document.getElementById("error");
+      const downloadBtn = document.getElementById("downloadBtn");
+
+      errorEl.textContent = "";
+      qrDiv.innerHTML = "";
+      linkPreview.textContent = "";
+      downloadBtn.style.display = "none";
+
+      if (!id) {
+        errorEl.textContent = "Merci d'entrer un identifiant d'agent.";
+        return;
+      }
+
+      const url = BASE_URL + "?id=" + encodeURIComponent(id);
+
+      qrInstance = new QRCode(qrDiv, {
+        text: url,
+        width: 220,
+        height: 220,
+        colorDark: "#111111",
+        colorLight: "#ffffff"
+      });
+
+      linkPreview.textContent = url;
+      downloadBtn.style.display = "block";
+    }
+
+    function telechargerQR() {
+      const qrDiv = document.getElementById("qrcode");
+      const canvas = qrDiv.querySelector("canvas");
+      const id = document.getElementById("agentId").value.trim();
+
+      if (!canvas) return;
+
+      const link = document.createElement("a");
+      link.download = "QR-" + id + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    // Génère avec la touche Entrée
+    document.getElementById("agentId").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") genererQR();
+    });
+  </script>
+
+</body>
+</html>
