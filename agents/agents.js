@@ -66,7 +66,7 @@ const agents = {
     "CDV-AG-008": {
         nom: "BAH THIERNO MAMADOU",
         fonction: "AGENT COMMERCIAL",
-        photo: "mamba.jpeg",
+        photo: "Mamba.jpeg",
         statut: "ACTIF",
         id: "CDV-AG-008",
         date: "14/08/2026"
