@@ -1,8 +1,8 @@
 const agents = {
-    "CDV-AG-001": {
-        nom: "NOM DE L'AGENT",
+    "CDV-AG-004": {
+        nom: "ISMAEL BARRY",
         fonction: "Agent commercial",
-        photo: "agents/photos/agent001.jpg",
+        photo: "ismo.jpeg",
         statut: "ACTIF",
         dateEmission: "13/08/2026"
     }
