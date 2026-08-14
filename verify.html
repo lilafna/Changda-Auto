@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vérification Agent - CHANGDA VEHICLE</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f2f4f7;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      width: 100%;
+      max-width: 430px;
+      border-radius: 20px;
+      padding: 30px 25px;
+      text-align: center;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.12);
+    }
+
+    .logo {
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+      margin-bottom: 15px;
+    }
+
+    h1 {
+      color: #c40000;
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .company {
+      color: #555;
+      margin-bottom: 25px;
+    }
+
+    .photo {
+      width: 130px;
+      height: 130px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 4px solid #c40000;
+      margin-bottom: 18px;
+    }
+
+    .verified {
+      display: inline-block;
+      background: #e8f7ed;
+      color: #16803c;
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .info {
+      text-align: left;
+      background: #f7f7f7;
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    .info p {
+      margin: 10px 0;
+      color: #333;
+    }
+
+    .info strong {
+      color: #111;
+    }
+
+    .footer {
+      margin-top: 20px;
+      color: #777;
+      font-size: 13px;
+    }
+
+    .error {
+      color: #c40000;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card" id="result">
+    <p>Vérification en cours...</p>
+  </div>
+
+  <!-- Charge les données des agents -->
+  <script src="agents/agents.js"></script>
+
+  <script>
+
+    // Récupère l'ID présent dans le QR Code
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+
+    const result = document.getElementById("result");
+
+    // Vérifie si l'ID existe
+    if (!id) {
+
+      result.innerHTML = `
+        <h1>CHANGDA VEHICLE</h1>
+        <p class="error">
+          Aucun identifiant d'agent fourni.
+        </p>
+      `;
+
+    } else if (typeof agents === "undefined" || !agents[id]) {
+
+      result.innerHTML = `
+        <h1>CHANGDA VEHICLE</h1>
+        <p class="error">
+          ❌ Agent introuvable<br><br>
+          Cet identifiant n'est pas enregistré dans notre système.
+        </p>
+      `;
+
+    } else {
+
+      const agent = agents[id];
+
+      result.innerHTML = `
+
+        <h1>CHANGDA VEHICLE</h1>
+
+        <p class="company">
+          Vérification officielle
+        </p>
+
+        <img
+          class="photo"
+          src="${agent.photo}"
+          alt="Photo de l'agent"
+        >
+
+        <br>
+
+        <div class="verified">
+          ✓ AGENT VÉRIFIÉ
+        </div>
+
+        <div class="info">
+
+          <p>
+            <strong>Nom :</strong><br>
+            ${agent.nom}
+          </p>
+
+          <p>
+            <strong>Fonction :</strong><br>
+            ${agent.fonction}
+          </p>
+
+          <p>
+            <strong>ID Agent :</strong><br>
+            ${agent.id}
+          </p>
+
+          <p>
+            <strong>Statut :</strong><br>
+            ${agent.statut}
+          </p>
+
+          <p>
+            <strong>Année :</strong><br>
+            ${agent.date}
+          </p>
+
+        </div>
+
+        <p class="footer">
+          Cette page permet de vérifier l'identité
+          d'un agent commercial CHANGDA VEHICLE.
+        </p>
+      `;
+    }
+
+  </script>
+
+</body>
+</html>
