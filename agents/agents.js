@@ -86,5 +86,13 @@ const agents = {
         statut: "ACTIF",
         id: "CDV-AG-008",
         date: "14/08/2026"
+    },
+    "CDV-AG-0011": {
+        nom: "THIERNO OUSMANE TOUNKARA",
+        fonction: "AGENT COMMERCIAL",
+        photo: "ousmane.jpeg",
+        statut: "ACTIF",
+        id: "CDV-AG-0011",
+        date: "15/08/2026"
     }
 };
