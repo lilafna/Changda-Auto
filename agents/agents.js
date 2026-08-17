@@ -84,7 +84,7 @@ const agents = {
         fonction: "AGENT COMMERCIAL",
         photo: "mamady.jpeg",
         statut: "ACTIF",
-        id: "CDV-AG-0010",
+        id: "CDV-AG-010",
         date: "14/08/2026"
     },
     "CDV-AG-0011": {
@@ -92,7 +92,7 @@ const agents = {
         fonction: "AGENT COMMERCIAL",
         photo: "ousmane.jpeg",
         statut: "ACTIF",
-        id: "CDV-AG-0011",
+        id: "CDV-AG-011",
         date: "15/08/2026"
     }
 };
